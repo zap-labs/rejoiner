@@ -38,7 +38,7 @@
     <grpc.version>1.7.0</grpc.version><!-- CURRENT_GRPC_VERSION -->
   </properties>
 
-  <groupId>com.google.api.graphql</groupId>
+  <groupId>com.zaplabs</groupId>
   <artifactId>rejoiner</artifactId>
   <name>Rejoiner</name>
   <version>0.1.1</version>
