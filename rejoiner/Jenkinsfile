@@ -1,0 +1,69 @@
+#!/usr/bin/env groovy
+
+pipeline {
+    agent { label 'microservices' }
+    parameters {
+        string(name: 'releaseVersion', defaultValue: '0', description: 'Version to Release')
+        string(name: 'developmentVersion', defaultValue: '0-SNAPSHOT', description: 'Version to set after release')
+        string(name: 'releaseDryRun', defaultValue: 'true', description: 'Simulate release')
+        string(name: 'gitUser', defaultValue: 'jenkins', description: 'User for the git commit on release')
+        string(name: 'gitEmail', defaultValue: 'jenkins@ziprealty.com', description: 'Email for the git commit on release')
+    }
+    stages {
+        stage('Prepare Build') {
+            steps {
+                // grab info from pom file
+                script {
+                    pom = readMavenPom()
+                    env.libraryName = pom.getArtifactId()
+                    env.pomVersion = pom.getVersion()
+                }
+                deleteDir()
+
+                checkout([
+                    $class: 'GitSCM',
+                    branches: scm.branches,
+                    extensions: scm.extensions + [[$class: 'LocalBranch']],
+                    userRemoteConfigs: scm.userRemoteConfigs
+                ])
+            }
+        }
+        stage('Package') {
+            steps {
+                withMaven(maven: 'M3') {
+                    sh 'mvn install integration-test'
+                }
+            }
+        }
+        stage('Deploy Artifacts') {
+            when {
+                branch "master"
+            }
+            steps {
+                withMaven(maven: 'M3') {
+                    sh 'mvn deploy -DskipTests=true'
+                }
+            }
+        }
+        stage('Release New Version') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'master' && params.releaseVersion != '0' && params.developmentVersion != '0-SNAPSHOT'
+                }
+            }
+            steps {
+                withMaven(maven: 'M3') {
+                    // todo: there's got to be a better way to set the user name and email
+                    sh "git config user.name = \"${params.gitUser}\""
+                    sh "git config user.email = \"${params.gitEmail}\""
+                    sh "mvn release:prepare -Dresume=false -DreleaseVersion=${params.releaseVersion} -DdevelopmentVersion=${params.developmentVersion} --batch-mode -DdryRun=${params.releaseDryRun}  -DskipTests"
+                    sh "if [ ${params.releaseDryRun} == false ] ; then mvn release:perform ; fi"
+                    sh "git config --unset user.name"
+                    sh "git config --unset user.email"
+                    slackSend color: 'good', message: "Released archetypes ${env.libraryName} (${params.releaseVersion}) \n\n${env.BUILD_URL}"
+
+                }
+            }
+        }
+    }
+}
