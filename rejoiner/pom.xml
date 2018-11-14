@@ -37,7 +37,7 @@
   <groupId>com.zaplabs</groupId>
   <artifactId>rejoiner</artifactId>
   <name>Rejoiner</name>
-  <version>0.1.2</version>
+  <version>0.2.0</version>
   <description>Generating GraphQL schemas from Protobufs.</description>
   <url>https://github.com/google/rejoiner</url>
   <packaging>jar</packaging>
