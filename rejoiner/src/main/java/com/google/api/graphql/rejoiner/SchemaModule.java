@@ -29,6 +29,18 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Message;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+import javax.inject.Provider;
+
 import graphql.Scalars;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -41,25 +53,13 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLScalarType;
 
-import javax.annotation.Nullable;
-import javax.inject.Provider;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Module for registering parts of a {@link graphql.schema.GraphQLSchema}.
  *
  * <p>Any public fields of type {@link GraphQLFieldDefinition} annotated with {@link Query} or
- * {@link Mutation} will be added to the top level query or mutation. Fields of type {@link
- * TypeModification} annotated with {@link SchemaModification} will be applied to the generated
- * schema in order to add, remove, or replace fields on a GraphQL type. Fields of type {@link
- * FileDescriptor} annotated with {@link ExtraType} will be available to GraphQL when creating the
- * final schema.
+ * {@link Mutation} will be added to the top level query or mutation. Fields of type {@link TypeModification} annotated with {@link
+ * SchemaModification} will be applied to the generated schema in order to add, remove, or replace fields on a GraphQL type. Fields of type
+ * {@link FileDescriptor} annotated with {@link ExtraType} will be available to GraphQL when creating the final schema.
  */
 public abstract class SchemaModule extends AbstractModule {
 
@@ -97,26 +97,32 @@ public abstract class SchemaModule extends AbstractModule {
     allMutationsInModule.addAll(mutations);
   }
 
-  protected void configureSchema() {}
+  protected void configureSchema() {
+  }
 
   @Override
   protected final void configure() {
     configureSchema();
     Multibinder<GraphQLFieldDefinition> queryMultibinder =
         Multibinder.newSetBinder(
-            binder(), new TypeLiteral<GraphQLFieldDefinition>() {}, Annotations.Queries.class);
+            binder(), new TypeLiteral<GraphQLFieldDefinition>() {
+            }, Annotations.Queries.class);
     Multibinder<GraphQLFieldDefinition> mutationMultibinder =
         Multibinder.newSetBinder(
-            binder(), new TypeLiteral<GraphQLFieldDefinition>() {}, Annotations.Mutations.class);
+            binder(), new TypeLiteral<GraphQLFieldDefinition>() {
+            }, Annotations.Mutations.class);
     Multibinder<TypeModification> typeModificationMultibinder =
         Multibinder.newSetBinder(
-            binder(), new TypeLiteral<TypeModification>() {}, Annotations.GraphModifications.class);
+            binder(), new TypeLiteral<TypeModification>() {
+            }, Annotations.GraphModifications.class);
     Multibinder<FileDescriptor> extraTypesMultibinder =
         Multibinder.newSetBinder(
-            binder(), new TypeLiteral<FileDescriptor>() {}, Annotations.ExtraTypes.class);
+            binder(), new TypeLiteral<FileDescriptor>() {
+            }, Annotations.ExtraTypes.class);
     Multibinder<NodeDataFetcher> relayIdMultibinder =
         Multibinder.newSetBinder(
-            binder(), new TypeLiteral<NodeDataFetcher>() {}, Annotations.Queries.class);
+            binder(), new TypeLiteral<NodeDataFetcher>() {
+            }, Annotations.Queries.class);
 
     allMutationsInModule.addAll(extraMutations());
 
@@ -142,12 +148,12 @@ public abstract class SchemaModule extends AbstractModule {
       }
 
       for (Method method : findMethods(getClass(), Query.class)) {
-        String name = method.getAnnotationsByType(Query.class)[0].value();
-        allQueriesInModule.add(methodToFieldDefinition(method, name, null));
+        Query query = method.getAnnotationsByType(Query.class)[0];
+        allQueriesInModule.add(methodToFieldDefinition(method, query.value(), query.fullName(), null));
       }
       for (Method method : findMethods(getClass(), Mutation.class)) {
-        String name = method.getAnnotationsByType(Mutation.class)[0].value();
-        allMutationsInModule.add(methodToFieldDefinition(method, name, null));
+        Mutation mutation = method.getAnnotationsByType(Mutation.class)[0];
+        allMutationsInModule.add(methodToFieldDefinition(method, mutation.value(), mutation.fullName(), null));
       }
 
       Namespace namespaceAnnotation = findClassAnnotation(getClass(), Namespace.class);
@@ -192,7 +198,7 @@ public abstract class SchemaModule extends AbstractModule {
 
       for (Method method : findMethods(getClass(), RelayNode.class)) {
         GraphQLFieldDefinition graphQLFieldDefinition =
-            methodToFieldDefinition(method, "_NOT_USED_", null);
+            methodToFieldDefinition(method, "_NOT_USED_", "_NOT_USED_", null);
         relayIdMultibinder
             .addBinding()
             .toInstance(
@@ -238,8 +244,7 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that are annotated with {@link Query}.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that are annotated with {@link Query}.
    */
   private static ImmutableSet<Field> findTypeModificationFields(
       Class<? extends SchemaModule> moduleClass) {
@@ -247,8 +252,7 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that are annotated with {@link Query}.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that are annotated with {@link Query}.
    */
   private static ImmutableSet<Field> findExtraTypeFields(
       Class<? extends SchemaModule> moduleClass) {
@@ -256,24 +260,22 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that are annotated with {@link Query}.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that are annotated with {@link Query}.
    */
   private static ImmutableSet<Field> findMutationFields(Class<? extends SchemaModule> moduleClass) {
     return findFields(moduleClass, Mutation.class, GraphQLFieldDefinition.class);
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that are annotated with {@link Query}.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that are annotated with {@link Query}.
    */
   private static ImmutableSet<Field> findQueryFields(Class<? extends SchemaModule> moduleClass) {
     return findFields(moduleClass, Query.class, GraphQLFieldDefinition.class);
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that are annotated with {@link RelayNode}.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that are annotated with {@link
+   * RelayNode}.
    */
   private static ImmutableSet<Method> findRelayIdMethods(
       Class<? extends SchemaModule> moduleClass) {
@@ -281,8 +283,8 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that have the expected type and annotation.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that have the expected type and
+   * annotation.
    */
   private static ImmutableSet<Method> findMethods(
       Class<? extends SchemaModule> moduleClass, Class<? extends Annotation> targetAnnotation) {
@@ -300,8 +302,8 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes
-   * that have the expected type and annotation.
+   * Returns an {@link ImmutableSet} of all the methods in {@code moduleClass} or its super classes that have the expected type and
+   * annotation.
    */
   private static <T extends Annotation> T findClassAnnotation(
       Class<? extends SchemaModule> moduleClass, Class<T> targetAnnotation) {
@@ -317,8 +319,8 @@ public abstract class SchemaModule extends AbstractModule {
   }
 
   /**
-   * Returns an {@link ImmutableSet} of all the fields in {@code moduleClass} or its super classes
-   * that have the expected type and annotation.
+   * Returns an {@link ImmutableSet} of all the fields in {@code moduleClass} or its super classes that have the expected type and
+   * annotation.
    */
   private static ImmutableSet<Field> findFields(
       Class<? extends SchemaModule> moduleClass,
@@ -381,12 +383,12 @@ public abstract class SchemaModule extends AbstractModule {
 
   private TypeModification methodToTypeModification(
       Method method, String name, Descriptor typeDescriptor) {
-    GraphQLFieldDefinition fieldDef = methodToFieldDefinition(method, name, typeDescriptor);
+    GraphQLFieldDefinition fieldDef = methodToFieldDefinition(method, name, name, typeDescriptor);
     return Type.find(typeDescriptor).addField(fieldDef);
   }
 
   private GraphQLFieldDefinition methodToFieldDefinition(
-      Method method, String name, @Nullable Descriptor descriptor) {
+      Method method, String name, @Nullable String fullName, @Nullable Descriptor descriptor) {
     method.setAccessible(true);
     try {
       ImmutableList<MethodMetadata> methodParameters = getMethodMetadata(method, descriptor);
@@ -415,6 +417,7 @@ public abstract class SchemaModule extends AbstractModule {
       GraphQLFieldDefinition.Builder fieldDef = GraphQLFieldDefinition.newFieldDefinition();
       fieldDef.type(returnType);
       fieldDef.name(name);
+      fieldDef.description(DescriptorSet.COMMENTS.get(fullName));
       for (MethodMetadata methodMetadata : methodParameters) {
         if (methodMetadata.hasArgument()) {
           fieldDef.argument(methodMetadata.argument());

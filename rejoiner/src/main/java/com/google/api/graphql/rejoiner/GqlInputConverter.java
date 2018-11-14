@@ -14,9 +14,6 @@
 
 package com.google.api.graphql.rejoiner;
 
-import static graphql.Scalars.GraphQLString;
-import com.google.common.base.CaseFormat;
-import com.google.common.base.Converter;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
@@ -26,6 +23,14 @@ import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.GenericDescriptor;
 import com.google.protobuf.Message;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
@@ -33,12 +38,8 @@ import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLTypeReference;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import static graphql.Scalars.GraphQLString;
 
 /**
  * Converts GraphQL inputs into Protobuf message.
@@ -111,8 +112,11 @@ final class GqlInputConverter {
         inputBuilder.type((GraphQLInputType) fieldType);
       }
 
+      inputBuilder.description(DescriptorSet.COMMENTS.get(field.getFullName()));
+
       builder.field(inputBuilder.build());
     }
+    builder.description(DescriptorSet.COMMENTS.get(descriptor.getFullName()));
     return builder.build();
   }
 
@@ -171,7 +175,9 @@ final class GqlInputConverter {
 
   // Based on ProtoRegistry.Builder, but builds a map of descriptors rather than types.
 
-  /** Builder for GqlInputConverter. */
+  /**
+   * Builder for GqlInputConverter.
+   */
   static class Builder {
     private final ArrayList<FileDescriptor> fileDescriptors = new ArrayList<>();
     private final ArrayList<Descriptor> descriptors = new ArrayList<>();
