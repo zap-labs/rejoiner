@@ -52,8 +52,8 @@ class DescriptorSet {
   }
 
   private static String constructComment(DescriptorProtos.SourceCodeInfo.Location location) {
-    String trailingComment = location.getTrailingComments();
-    return (location.getLeadingComments()
+    String trailingComment = location.getTrailingComments().trim();
+    return (location.getLeadingComments().trim()
         + (!trailingComment.isEmpty() ? (". " + trailingComment) : "")
     ).replaceAll("^[*\\\\/.]*\\s*", "");
   }
@@ -67,7 +67,7 @@ class DescriptorSet {
    * @see DescriptorProtos.SourceCodeInfoOrBuilder for more info
    *
    * @param descriptor proto file descriptor
-   * @param path pathe of the element
+   * @param path       path of the element
    * @return full element's path as a string
    */
   private static Optional<String> getFullName(DescriptorProtos.FileDescriptorProto descriptor, List<Integer> path) {
