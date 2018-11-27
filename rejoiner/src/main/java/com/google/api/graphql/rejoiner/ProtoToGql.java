@@ -54,10 +54,13 @@ import static graphql.Scalars.GraphQLID;
 import static graphql.Scalars.GraphQLString;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 
-/** Converts Protos to GraphQL Types. */
+/**
+ * Converts Protos to GraphQL Types.
+ */
 final class ProtoToGql {
 
-  private ProtoToGql() {}
+  private ProtoToGql() {
+  }
 
   private static final ImmutableMap<Type, GraphQLScalarType> TYPE_MAP =
       new ImmutableMap.Builder<Type, GraphQLScalarType>()
@@ -157,16 +160,7 @@ final class ProtoToGql {
                   )
               )
               .name(fieldDescriptor.getJsonName());
-      if (fieldDescriptor.getFile().toProto().
-          getSourceCodeInfo().getLocationCount() > fieldDescriptor.getIndex()) {
-        builder.description(
-            fieldDescriptor
-                .getFile()
-                .toProto()
-                .getSourceCodeInfo()
-                .getLocation(fieldDescriptor.getIndex())
-                .getLeadingComments());
-      }
+      builder.description(DescriptorSet.COMMENTS.get(fieldDescriptor.getFullName()));
       if (fieldDescriptor.getOptions().hasDeprecated()
           && fieldDescriptor.getOptions().getDeprecated()) {
         builder.deprecate("deprecated in proto");
@@ -175,7 +169,9 @@ final class ProtoToGql {
     }
   }
 
-  /** Returns a GraphQLOutputType generated from a FieldDescriptor. */
+  /**
+   * Returns a GraphQLOutputType generated from a FieldDescriptor.
+   */
   static GraphQLOutputType convertType(FieldDescriptor fieldDescriptor) {
     final GraphQLOutputType type;
 
@@ -236,11 +232,11 @@ final class ProtoToGql {
                       field ->
                           field.getName().equals("id")
                               ? GraphQLFieldDefinition.newFieldDefinition()
-                                  .name("rawId")
-                                  .description(field.getDescription())
-                                  .type(field.getType())
-                                  .dataFetcher(field.getDataFetcher())
-                                  .build()
+                              .name("rawId")
+                              .description(field.getDescription())
+                              .type(field.getType())
+                              .dataFetcher(field.getDataFetcher())
+                              .build()
                               : field)
                   .collect(ImmutableList.toImmutableList()))
           .build();
@@ -248,6 +244,7 @@ final class ProtoToGql {
 
     return GraphQLObjectType.newObject()
         .name(getReferenceName(descriptor))
+        .description(DescriptorSet.COMMENTS.get(descriptor.getFullName()))
         .fields(graphQLFieldDefinitions.isEmpty() ? STATIC_FIELD : graphQLFieldDefinitions)
         .build();
   }
@@ -255,17 +252,22 @@ final class ProtoToGql {
   static GraphQLEnumType convert(EnumDescriptor descriptor) {
     GraphQLEnumType.Builder builder = GraphQLEnumType.newEnum().name(getReferenceName(descriptor));
     for (EnumValueDescriptor value : descriptor.getValues()) {
-      builder.value(value.getName());
+      builder.value(value.getName(), value.getName(), DescriptorSet.COMMENTS.get(value.getFullName()),
+          value.getOptions().getDeprecated() ? "deprecated in proto" : null);
     }
     return builder.build();
   }
 
-  /** Returns the GraphQL name of the supplied proto. */
+  /**
+   * Returns the GraphQL name of the supplied proto.
+   */
   static String getReferenceName(GenericDescriptor descriptor) {
     return CharMatcher.anyOf(".").replaceFrom(descriptor.getFullName(), "_");
   }
 
-  /** Returns a reference to the GraphQL type corresponding to the supplied proto. */
+  /**
+   * Returns a reference to the GraphQL type corresponding to the supplied proto.
+   */
   static GraphQLTypeReference getReference(GenericDescriptor descriptor) {
     return new GraphQLTypeReference(getReferenceName(descriptor));
   }

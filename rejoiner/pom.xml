@@ -37,7 +37,7 @@
   <groupId>com.zaplabs</groupId>
   <artifactId>rejoiner</artifactId>
   <name>Rejoiner</name>
-  <version>0.1.1</version>
+  <version>0.2.0</version>
   <description>Generating GraphQL schemas from Protobufs.</description>
   <url>https://github.com/google/rejoiner</url>
   <packaging>jar</packaging>
@@ -258,6 +258,11 @@
        <version>0.5.1</version>
        <configuration>
          <protocExecutable>/usr/local/bin/protoc</protocExecutable>
+         <writeDescriptorSet>true</writeDescriptorSet>
+         <descriptorSetFileName>descriptor_set.desc</descriptorSetFileName>
+         <descriptorSetOutputDirectory>${build.directory}/test-classes/META-INF/proto</descriptorSetOutputDirectory>
+         <includeSourceInfoInDescriptorSet>true</includeSourceInfoInDescriptorSet>
+         <includeDependenciesInDescriptorSet>true</includeDependenciesInDescriptorSet>
        </configuration>
        <executions>
          <execution>
